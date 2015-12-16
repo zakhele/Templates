@@ -3,17 +3,21 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "newStorageAccountName": {
+      "value": "zhmstore1"
+    },
       "type": "string",
       "metadata": {
         "description": "Unique DNS Name for the Storage Account where the Virtual Machine's disks will be placed."
       }
     },
     "adminUsername": {
+      "value":"admin123"
+    },
       "type": "string",
       "metadata": {
         "description": "Username for the Virtual Machine."
-      }
-    },
+      },
+
     "adminPassword": {
       "type": "securestring",
       "metadata": {
@@ -21,9 +25,22 @@
       }
     },
     "dnsNameForPublicIP": {
+      "value":"zhm0402"
+    },
       "type": "string",
       "metadata": {
         "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
+      },
+
+    "parameters('location')": {
+      "type": "string",
+      "defaultValue": "West US",
+      "allowedValues": [
+        "West US",
+        "East US 2"
+      ],
+      "metadata": {
+        "description": "Rectricts choices to where premium storage is located in the US."
       }
     },
     "windowsOSVersion": {
@@ -37,10 +54,16 @@
       "metadata": {
         "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version. Allowed values: 2008-R2-SP1, 2012-Datacenter, 2012-R2-Datacenter."
       }
-    }
+    },
   },
+  "sizeOfEachDataDiskinGB": {
+    "type": "string",
+    "metadata": {
+      "description": "Size of each data disk in GB"
+    }
+  }
+},
   "variables": {
-    "location": "West US",
     "imagePublisher": "MicrosoftWindowsServer",
     "imageOffer": "WindowsServer",
     "OSDiskName": "osdiskforwindowssimple",
@@ -56,14 +79,16 @@
     "vmSize": "Standard_A2",
     "virtualNetworkName": "MyVNET",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
-    "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]"
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
   },
+  "dataDisk1VhdName":
+  "[concat(http://',parameters('newStorageAccountName'), '.blob.core.windows.net/',variables('vmStorageAccountName'),'/',variables ('vmName'),'dataDisk1.vhd')]"
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[parameters('newStorageAccountName')]",
       "apiVersion": "2015-05-01-preview",
-      "location": "[variables('location')]",
+      "parameters('location')": "[variables('parameters('location')')]",
       "properties": {
         "accountType": "[variables('storageAccountType')]"
       }
@@ -72,9 +97,9 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
-      "location": "[variables('location')]",
+      "parameters('location')": "[variables('parameters('location')')]",
       "properties": {
-        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "publicIPAlparameters('location')Method": "[variables('publicIPAddressType')]",
         "dnsSettings": {
           "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
         }
@@ -84,7 +109,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
-      "location": "[variables('location')]",
+      "parameters('location')": "[variables('parameters('location')')]",
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -105,7 +130,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
-      "location": "[variables('location')]",
+      "parameters('location')": "[variables('parameters('location')')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
@@ -115,7 +140,7 @@
           {
             "name": "ipconfig1",
             "properties": {
-              "privateIPAllocationMethod": "Dynamic",
+              "privateIPAlparameters('location')Method": "Dynamic",
               "publicIPAddress": {
                 "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
               },
@@ -131,7 +156,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('vmName')]",
-      "location": "[variables('location')]",
+      "parameters('location')": "[variables('parameters('location')')]",
       "dependsOn": [
         "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
@@ -161,6 +186,17 @@
             "createOption": "FromImage"
           }
         },
+        "dataDisks": [
+          {
+            "name": "datadisk1",
+            "diskSizeGB": "[parameters('sizeOfDiskInGB')]",
+            "lun": 0,
+            "vhd":{
+              "Uri": "[variables('dataDisk1VhdName')]"
+            },
+            "crationOption": "Empty"
+          }
+        ]
         "networkProfile": {
           "networkInterfaces": [
             {
